@@ -39,8 +39,10 @@ class GPUMonitor:
                 ['nvidia-smi', '--query-gpu=utilization.gpu', '--format=csv,nounits,noheader'],
                 capture_output=True, text=True, timeout=1
             )
-            return int(result.stdout.strip().split('\n')[0])
-        except Exception:
+            util = int(result.stdout.strip().split('\n')[0])
+            return util
+        except Exception as e:
+            # 静默失败，返回0
             return 0
 
     def monitor(self):
@@ -74,8 +76,8 @@ class GPUMonitor:
         import numpy as np
         utils = np.array(self.gpu_utils)
 
-        # 计算空闲时间（GPU利用率低于10%的时间）
-        idle_count = np.sum(utils < 10)
+        # 计算空闲时间（GPU利用率低于20%的时间）
+        idle_count = np.sum(utils < 20)
         idle_ratio = idle_count / len(utils) * 100
 
         return {
@@ -108,6 +110,9 @@ def train_with_workers(model, device, batch_size, num_workers, num_batches=200):
     monitor = GPUMonitor()
     monitor.start()
 
+    # 等待监控线程完全启动
+    time.sleep(0.5)
+
     start_time = time.time()
 
     batch_count = 0
@@ -128,6 +133,9 @@ def train_with_workers(model, device, batch_size, num_workers, num_batches=200):
     # 确保所有GPU操作完成
     if device.type == 'cuda':
         torch.cuda.synchronize()
+
+    # 等待一下确保监控线程采集到最后的数据
+    time.sleep(0.5)
 
     training_time = time.time() - start_time
 
@@ -189,9 +197,9 @@ def generate_description(result):
         stability = "相对平稳"
 
     # 分析空闲情况
-    if stats['idle_ratio'] > 20:
+    if stats['idle_ratio'] > 30:
         idle_desc = f"GPU经常空闲，约{stats['idle_ratio']:.1f}%的时间处于空闲状态"
-    elif stats['idle_ratio'] > 5:
+    elif stats['idle_ratio'] > 10:
         idle_desc = f"GPU偶尔空闲，空闲率为{stats['idle_ratio']:.1f}%"
     else:
         idle_desc = "GPU保持高利用率，几乎无空闲"
@@ -296,7 +304,8 @@ def main():
 
         print(f"完成！训练时间: {result['training_time']:.2f}秒")
         print(f"GPU平均利用率: {result['gpu_stats']['mean']:.2f}%")
-        print(f"利用率标准差: {result['gpu_stats']['std']:.2f}%\n")
+        print(f"利用率标准差: {result['gpu_stats']['std']:.2f}%")
+        print(f"采集样本数: {result['gpu_stats']['samples']}个\n")
 
         # 清理
         del model
