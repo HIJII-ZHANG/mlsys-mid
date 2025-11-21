@@ -10,15 +10,16 @@ from mobilenet_v2 import get_mobilenet_v2
 
 class RandomDataset(Dataset):
     """生成随机数据的数据集"""
-    def __init__(self, size=1000):
+    def __init__(self, size=1000, image_size=224):
         self.size = size
+        self.image_size = image_size
 
     def __len__(self):
         return self.size
 
     def __getitem__(self, idx):
-        # 生成随机图像和标签
-        image = torch.randn(3, 32, 32)
+        # 生成更大的随机图像（224x224，MobileNet的标准输入）
+        image = torch.randn(3, self.image_size, self.image_size)
         label = torch.randint(0, 10, (1,)).item()
         return image, label
 
@@ -50,7 +51,7 @@ class GPUMonitor:
             current_time = time.time() - self.start_time
             self.gpu_utils.append(util)
             self.timestamps.append(current_time)
-            time.sleep(0.5)  # 每0.5秒采样一次
+            time.sleep(0.2)  # 每0.2秒采样一次，提高采样频率
 
     def start(self):
         """开始监控"""
@@ -87,14 +88,16 @@ class GPUMonitor:
         }
 
 
-def train_with_workers(model, device, batch_size, num_workers, num_batches=100):
+def train_with_workers(model, device, batch_size, num_workers, num_batches=200):
     """使用指定worker数量训练模型"""
-    dataset = RandomDataset(size=num_batches * batch_size)
+    # 增加数据集大小，确保训练时间足够长
+    dataset = RandomDataset(size=num_batches * batch_size * 2, image_size=224)
     dataloader = DataLoader(
         dataset,
         batch_size=batch_size,
         num_workers=num_workers,
-        pin_memory=True if num_workers > 0 else False
+        pin_memory=True if num_workers > 0 else False,
+        drop_last=True  # 丢弃最后不完整的batch
     )
 
     model.train()
@@ -109,8 +112,8 @@ def train_with_workers(model, device, batch_size, num_workers, num_batches=100):
 
     batch_count = 0
     for inputs, labels in dataloader:
-        inputs = inputs.to(device)
-        labels = labels.to(device)
+        inputs = inputs.to(device, non_blocking=True)
+        labels = labels.to(device, non_blocking=True)
 
         optimizer.zero_grad()
         outputs = model(inputs)
@@ -121,6 +124,10 @@ def train_with_workers(model, device, batch_size, num_workers, num_batches=100):
         batch_count += 1
         if batch_count >= num_batches:
             break
+
+    # 确保所有GPU操作完成
+    if device.type == 'cuda':
+        torch.cuda.synchronize()
 
     training_time = time.time() - start_time
 
@@ -263,7 +270,7 @@ def main():
 
     # 固定参数
     batch_size = 64
-    num_batches = 10000
+    num_batches = 200  # 增加batch数量，延长训练时间
     worker_list = [0, 2, 4, 8]
 
     print(f"测试配置:")
