@@ -95,7 +95,7 @@ def main():
     oom_batch_size = None
 
     batch_size = 8
-    max_batch_size = 2048  # 设置一个上限防止无限循环
+    max_batch_size = 100000000  # 设置一个上限防止无限循环
 
     print("开始测试批大小...\n")
     print(f"{'批大小':<12} {'显存占用(MB)':<20} {'状态':<15}")
