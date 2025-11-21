@@ -1,9 +1,10 @@
 """
 深度学习模型性能测试 - 主入口
-包含三个测试任务：
+包含四个测试任务：
 1. 对比3个模型的显存占用差异
 2. 找出模型能用的最大批大小
 3. 找到让GPU使用率最平稳的worker数量
+4. 用Profiler找瓶颈（进阶）
 """
 
 import sys
@@ -32,6 +33,12 @@ def print_menu():
     print("      - 实时监控GPU利用率")
     print("      - 生成GPU利用率对比图\n")
 
+    print("  [4] 任务4：用Profiler找瓶颈（进阶）")
+    print("      - 使用 PyTorch Profiler 分析训练过程")
+    print("      - 找出最耗时的操作")
+    print("      - 生成Chrome trace文件和TensorBoard日志")
+    print("      - 分析CPU/GPU时间分布\n")
+
     print("  [0] 退出程序\n")
     print("="*80)
 
@@ -42,7 +49,7 @@ def main():
         print_menu()
 
         try:
-            choice = input("请输入任务编号 [0-3]: ").strip()
+            choice = input("请输入任务编号 [0-4]: ").strip()
 
             if choice == "0":
                 print("\n退出程序。再见！\n")
@@ -63,8 +70,13 @@ def main():
                 from task3_gpu_workers import main as run_task3
                 run_task3()
 
+            elif choice == "4":
+                print("\n正在启动任务4...")
+                from task4_profiler import run_task4
+                run_task4()
+
             else:
-                print("\n❌ 无效的选择，请输入 0-3 之间的数字。")
+                print("\n❌ 无效的选择，请输入 0-4 之间的数字。")
                 continue
 
             # 任务完成后询问是否继续

@@ -7,7 +7,7 @@ import torch.optim as optim
 import time
 import subprocess
 
-from simple_cnn import SimpleCNN
+from simple_cnn import get_simple_cnn
 from resnet18 import get_resnet18
 from mobilenet_v2 import get_mobilenet_v2
 
@@ -123,7 +123,7 @@ def run_task1():
 
     # 1. 测试 SimpleCNN
     print("\n开始测试 SimpleCNN...")
-    simple_cnn = SimpleCNN(num_classes=10)
+    simple_cnn = get_simple_cnn(num_classes=10)
     result = test_model("SimpleCNN", simple_cnn, device, batch_size)
     results.append(result)
     del simple_cnn
