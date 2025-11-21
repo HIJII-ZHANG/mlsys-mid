@@ -212,7 +212,7 @@ def plot_gpu_utilization(results):
     import matplotlib
 
     # 配置matplotlib支持中文显示
-    matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'SimHei', 'DejaVu Sans']
+    matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'SimHei', 'DejaVu Sans', 'WenQuanYi Zen Hei']
     matplotlib.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
 
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
