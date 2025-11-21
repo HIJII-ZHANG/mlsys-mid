@@ -209,6 +209,11 @@ def generate_description(result):
 def plot_gpu_utilization(results):
     """绘制GPU利用率对比图"""
     import matplotlib.pyplot as plt
+    import matplotlib
+
+    # 配置matplotlib支持中文显示
+    matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'SimHei', 'DejaVu Sans']
+    matplotlib.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
 
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
     axes = axes.flatten()
@@ -224,12 +229,12 @@ def plot_gpu_utilization(results):
         # 绘制利用率曲线
         ax.plot(timestamps, gpu_utils, linewidth=1.5, alpha=0.7)
         ax.axhline(y=stats['mean'], color='r', linestyle='--',
-                   label=f'平均: {stats["mean"]:.1f}%', linewidth=2)
+                   label=f'Average: {stats["mean"]:.1f}%', linewidth=2)
         ax.axhline(y=10, color='orange', linestyle=':',
                    label='空闲阈值 (10%)', linewidth=1.5)
 
-        ax.set_xlabel('时间 (秒)', fontsize=11)
-        ax.set_ylabel('GPU利用率 (%)', fontsize=11)
+        ax.set_xlabel('Time (s)', fontsize=11)
+        ax.set_ylabel('GPU Utilization (%)', fontsize=11)
         ax.set_title(f'Worker = {num_workers} | 标准差={stats["std"]:.1f}% | 空闲率={stats["idle_ratio"]:.1f}%',
                      fontsize=12, fontweight='bold')
         ax.grid(True, alpha=0.3)

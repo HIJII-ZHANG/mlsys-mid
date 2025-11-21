@@ -3,7 +3,12 @@ import torch.nn as nn
 import torch.optim as optim
 import subprocess
 import matplotlib.pyplot as plt
+import matplotlib
 from mobilenet_v2 import get_mobilenet_v2
+
+# 配置matplotlib支持中文显示
+matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'SimHei', 'DejaVu Sans']
+matplotlib.rcParams['axes.unicode_minus'] = False  # 解决负号显示问题
 
 
 def get_gpu_memory():
@@ -124,7 +129,7 @@ def main():
     # 绘制显存占用图
     if batch_sizes:
         plt.figure(figsize=(10, 6))
-        plt.plot(batch_sizes, memory_usage, marker='o', linewidth=2, markersize=8, label='显存占用')
+        plt.plot(batch_sizes, memory_usage, marker='o', linewidth=2, markersize=8, label='memory used')
 
         # 标注每个点的值
         for i, (bs, mem) in enumerate(zip(batch_sizes, memory_usage)):
@@ -137,7 +142,7 @@ def main():
         # 如果有OOM，标注OOM点
         if oom_batch_size:
             # 在最后一个成功点和OOM点之间画一个标记
-            plt.axvline(x=oom_batch_size, color='r', linestyle='--', alpha=0.7, label='OOM点')
+            plt.axvline(x=oom_batch_size, color='r', linestyle='--', alpha=0.7, label='OOM point')
             plt.scatter([oom_batch_size], [memory_usage[-1]],
                        color='red', s=200, marker='x', linewidths=3,
                        label=f'OOM (batch_size={oom_batch_size})', zorder=5)
@@ -145,9 +150,9 @@ def main():
                     'OOM', fontsize=12, color='red', fontweight='bold',
                     ha='center')
 
-        plt.xlabel('批大小 (Batch Size)', fontsize=12)
-        plt.ylabel('显存占用 (MiB)', fontsize=12)
-        plt.title('MobileNetV2 - 批大小 vs 显存占用', fontsize=14, fontweight='bold')
+        plt.xlabel('Batch Size', fontsize=12)
+        plt.ylabel('Memory Used (MiB)', fontsize=12)
+        plt.title('MobileNetV2 - Batch Size vs Memory Used', fontsize=14, fontweight='bold')
         plt.grid(True, alpha=0.3)
         plt.legend(fontsize=10)
 
