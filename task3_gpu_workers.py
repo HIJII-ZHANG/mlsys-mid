@@ -5,7 +5,7 @@ from torch.utils.data import Dataset, DataLoader
 import time
 import subprocess
 import threading
-from mobilenet_v2 import get_mobilenet_v2
+from heavy_resnet import get_heavy_resnet
 
 
 class RandomDataset(Dataset):
@@ -325,13 +325,13 @@ def main():
     print(f"{'='*80}\n")
 
     # 固定参数
-    batch_size = 64
+    batch_size = 16  # 减小batch_size，让数据加载间隙更明显
     num_batches = 400  # 增加到400个batch，延长训练时间到约60-120秒
     worker_list = [0, 2, 4, 8]
     sample_interval = 1.0  # 1秒采样一次用于散点图
 
     print(f"测试配置:")
-    print(f"  - 模型: MobileNetV2")
+    print(f"  - 模型: HeavyResNet (ResNet50+额外层)")
     print(f"  - 批大小: {batch_size}")
     print(f"  - 训练批次数: {num_batches}")
     print(f"  - 测试Worker数量: {worker_list}")
@@ -346,7 +346,7 @@ def main():
         print(f"{'='*80}")
 
         # 创建新模型实例
-        model = get_mobilenet_v2(num_classes=10).to(device)
+        model = get_heavy_resnet(num_classes=10).to(device)
 
         # 训练并监控
         result = train_with_workers(model, device, batch_size, num_workers, num_batches, sample_interval)
