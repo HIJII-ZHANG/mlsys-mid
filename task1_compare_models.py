@@ -122,8 +122,15 @@ def run_task1():
     results = []
 
     # 空挂载防止缓存池误差
-    mobilenet = get_mobilenet_v2(num_classes=10)
-    result = test_model("MobileNetV2", mobilenet, device, batch_size)
+    print("\n预热GPU缓存池...")
+    warmup_model = get_mobilenet_v2(num_classes=10).to(device)
+    dummy_input = torch.randn(batch_size, 3, 32, 32).to(device)
+    _ = warmup_model(dummy_input)
+    del warmup_model, dummy_input
+    torch.cuda.empty_cache()
+    torch.cuda.reset_peak_memory_stats(device)
+    time.sleep(2)
+    print("预热完成！\n")
 
     # 1. 测试 SimpleCNN
     print("\n开始测试 SimpleCNN...")
