@@ -121,6 +121,10 @@ def run_task1():
     batch_size = 32
     results = []
 
+    # 空挂载防止缓存池误差
+    mobilenet = get_mobilenet_v2(num_classes=10)
+    result = test_model("MobileNetV2", mobilenet, device, batch_size)
+
     # 1. 测试 SimpleCNN
     print("\n开始测试 SimpleCNN...")
     simple_cnn = get_simple_cnn(num_classes=10)
