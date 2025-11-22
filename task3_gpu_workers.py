@@ -10,14 +10,18 @@ from heavy_resnet import get_heavy_resnet
 
 class RandomDataset(Dataset):
     """生成随机数据的数据集"""
-    def __init__(self, size=1000, image_size=224):
+    def __init__(self, size=1000, image_size=224, delay=0.0):
         self.size = size
         self.image_size = image_size
+        self.delay = delay  # 添加延迟参数模拟慢速I/O
 
     def __len__(self):
         return self.size
 
     def __getitem__(self, idx):
+        # 添加延迟模拟慢速数据加载（如从磁盘读取）
+        if self.delay > 0:
+            time.sleep(self.delay)
         # 生成更大的随机图像（224x224，MobileNet的标准输入）
         image = torch.randn(3, self.image_size, self.image_size)
         label = torch.randint(0, 10, (1,)).item()
@@ -91,10 +95,10 @@ class GPUMonitor:
         }
 
 
-def train_with_workers(model, device, batch_size, num_workers, num_batches=200, sample_interval=0.2):
+def train_with_workers(model, device, batch_size, num_workers, num_batches=200, sample_interval=0.2, data_delay=0.0):
     """使用指定worker数量训练模型"""
     # 增加数据集大小，确保训练时间足够长
-    dataset = RandomDataset(size=num_batches * batch_size * 2, image_size=224)
+    dataset = RandomDataset(size=num_batches * batch_size * 2, image_size=224, delay=data_delay)
     dataloader = DataLoader(
         dataset,
         batch_size=batch_size,
@@ -329,6 +333,7 @@ def main():
     num_batches = 400  # 增加到400个batch，延长训练时间到约60-120秒
     worker_list = [0, 2, 4, 8]
     sample_interval = 1.0  # 1秒采样一次用于散点图
+    data_delay = 0.1  # 每个样本加载延迟100ms，模拟慢速磁盘I/O
 
     print(f"测试配置:")
     print(f"  - 模型: HeavyResNet (ResNet50+额外层)")
@@ -336,6 +341,7 @@ def main():
     print(f"  - 训练批次数: {num_batches}")
     print(f"  - 测试Worker数量: {worker_list}")
     print(f"  - GPU采样间隔: {sample_interval}秒")
+    print(f"  - 数据加载延迟: {data_delay*1000:.0f}ms/样本 (模拟慢速I/O)")
     print(f"\n开始测试...\n")
 
     results = []
@@ -349,7 +355,7 @@ def main():
         model = get_heavy_resnet(num_classes=10).to(device)
 
         # 训练并监控
-        result = train_with_workers(model, device, batch_size, num_workers, num_batches, sample_interval)
+        result = train_with_workers(model, device, batch_size, num_workers, num_batches, sample_interval, data_delay)
         results.append(result)
 
         print(f"完成！训练时间: {result['training_time']:.2f}秒")
