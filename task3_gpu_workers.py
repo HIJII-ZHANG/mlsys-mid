@@ -333,7 +333,7 @@ def main():
     num_batches = 400  # 增加到400个batch，延长训练时间到约60-120秒
     worker_list = [0, 2, 4, 8]
     sample_interval = 1.0  # 1秒采样一次用于散点图
-    data_delay = 0.1  # 每个样本加载延迟100ms，模拟慢速磁盘I/O
+    data_delay = 0.02  # 每个样本加载延迟100ms，模拟慢速磁盘I/O
 
     print(f"测试配置:")
     print(f"  - 模型: HeavyResNet (ResNet50+额外层)")
