@@ -58,7 +58,8 @@ def train_with_profiler(model, device, batch_size=64, num_workers=4, profile_ste
         on_trace_ready=profiler.tensorboard_trace_handler('./profiler_logs'),
         record_shapes=True,      # 记录张量形状
         profile_memory=True,     # 记录内存使用
-        with_stack=True          # 记录Python堆栈
+        with_stack=True,         # 记录Python堆栈
+        with_flops=True          # 记录FLOPs
     ) as prof:
 
         step = 0
@@ -120,12 +121,17 @@ def analyze_profiler_results(prof):
 
     # 4. 导出Chrome trace文件
     trace_file = "profiler_trace.json"
-    prof.export_chrome_trace(trace_file)
-    print(f"\n📊 Chrome trace文件已导出: {trace_file}")
-    print(f"   查看方法：")
-    print(f"   1. 打开Chrome浏览器")
-    print(f"   2. 访问 chrome://tracing")
-    print(f"   3. 点击 'Load' 按钮加载 {trace_file}")
+    try:
+        prof.export_chrome_trace(trace_file)
+        print(f"\n📊 Chrome trace文件已导出: {trace_file}")
+        print(f"   查看方法：")
+        print(f"   1. 打开Chrome浏览器")
+        print(f"   2. 访问 chrome://tracing")
+        print(f"   3. 点击 'Load' 按钮加载 {trace_file}")
+    except Exception as e:
+        print(f"\n📊 Chrome trace已通过TensorBoard handler自动保存")
+        print(f"   文件位置: ./profiler_logs/")
+        print(f"   注意: 使用on_trace_ready时，trace会自动保存到指定目录")
 
     # 5. 生成分析建议
     print("\n" + "="*80)
