@@ -45,7 +45,7 @@ class GPUMonitor:
             # 静默失败，返回0
             return 0
 
-    def monitor(self):
+    def monitor(self, sample_interval=0.2):
         """监控线程"""
         self.start_time = time.time()
         while self.running:
@@ -53,14 +53,15 @@ class GPUMonitor:
             current_time = time.time() - self.start_time
             self.gpu_utils.append(util)
             self.timestamps.append(current_time)
-            time.sleep(0.2)  # 每0.2秒采样一次，提高采样频率
+            time.sleep(sample_interval)  # 采样间隔可配置
 
-    def start(self):
+    def start(self, sample_interval=0.2):
         """开始监控"""
         self.running = True
         self.gpu_utils = []
         self.timestamps = []
-        self.thread = threading.Thread(target=self.monitor)
+        self.sample_interval = sample_interval
+        self.thread = threading.Thread(target=lambda: self.monitor(sample_interval))
         self.thread.start()
 
     def stop(self):
@@ -90,7 +91,7 @@ class GPUMonitor:
         }
 
 
-def train_with_workers(model, device, batch_size, num_workers, num_batches=200):
+def train_with_workers(model, device, batch_size, num_workers, num_batches=200, sample_interval=0.2):
     """使用指定worker数量训练模型"""
     # 增加数据集大小，确保训练时间足够长
     dataset = RandomDataset(size=num_batches * batch_size * 2, image_size=224)
@@ -108,7 +109,7 @@ def train_with_workers(model, device, batch_size, num_workers, num_batches=200):
 
     # 启动GPU监控
     monitor = GPUMonitor()
-    monitor.start()
+    monitor.start(sample_interval=sample_interval)
 
     # 等待监控线程完全启动
     time.sleep(0.5)
@@ -265,6 +266,53 @@ def plot_gpu_utilization(results):
     plt.show()
 
 
+def plot_gpu_scatter(results):
+    """绘制GPU利用率散点图（1秒采样）"""
+    import matplotlib.pyplot as plt
+    import matplotlib
+    import numpy as np
+
+    # 配置matplotlib支持中文显示
+    matplotlib.rcParams['font.sans-serif'] = ['Arial Unicode MS', 'SimHei', 'DejaVu Sans']
+    matplotlib.rcParams['axes.unicode_minus'] = False
+
+    fig, ax = plt.subplots(figsize=(14, 8))
+
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
+    markers = ['o', 's', '^', 'D']
+
+    for idx, result in enumerate(results):
+        num_workers = result['num_workers']
+        timestamps = np.array(result['timestamps'])
+        gpu_utils = np.array(result['gpu_utils'])
+
+        # 绘制散点，每个worker用不同颜色和标记
+        ax.scatter(timestamps, gpu_utils,
+                  c=colors[idx], marker=markers[idx], s=30, alpha=0.6,
+                  label=f'Worker={num_workers} (均值={result["gpu_stats"]["mean"]:.1f}%, 标准差={result["gpu_stats"]["std"]:.1f}%)',
+                  edgecolors='black', linewidth=0.5)
+
+    # 添加参考线
+    ax.axhline(y=80, color='green', linestyle='--', linewidth=2, alpha=0.5, label='高利用率阈值 (80%)')
+    ax.axhline(y=20, color='orange', linestyle='--', linewidth=2, alpha=0.5, label='低利用率阈值 (20%)')
+
+    ax.set_xlabel('训练时间 (秒)', fontsize=13, fontweight='bold')
+    ax.set_ylabel('GPU利用率 (%)', fontsize=13, fontweight='bold')
+    ax.set_title('不同Worker数量的GPU利用率时序分布（散点图）', fontsize=15, fontweight='bold', pad=20)
+    ax.grid(True, alpha=0.3, linestyle=':', linewidth=1)
+    ax.legend(fontsize=10, loc='best', framealpha=0.9)
+    ax.set_ylim(-5, 105)
+    ax.set_xlim(left=0)
+
+    plt.tight_layout()
+
+    output_file = 'gpu_utilization_scatter.png'
+    plt.savefig(output_file, dpi=300, bbox_inches='tight')
+    print(f"\nGPU利用率散点图已保存到: {output_file}")
+
+    plt.show()
+
+
 def main():
     # 检查CUDA是否可用
     if not torch.cuda.is_available():
@@ -278,14 +326,16 @@ def main():
 
     # 固定参数
     batch_size = 64
-    num_batches = 200  # 增加batch数量，延长训练时间
+    num_batches = 400  # 增加到400个batch，延长训练时间到约60-120秒
     worker_list = [0, 2, 4, 8]
+    sample_interval = 1.0  # 1秒采样一次用于散点图
 
     print(f"测试配置:")
     print(f"  - 模型: MobileNetV2")
     print(f"  - 批大小: {batch_size}")
     print(f"  - 训练批次数: {num_batches}")
     print(f"  - 测试Worker数量: {worker_list}")
+    print(f"  - GPU采样间隔: {sample_interval}秒")
     print(f"\n开始测试...\n")
 
     results = []
@@ -299,7 +349,7 @@ def main():
         model = get_mobilenet_v2(num_classes=10).to(device)
 
         # 训练并监控
-        result = train_with_workers(model, device, batch_size, num_workers, num_batches)
+        result = train_with_workers(model, device, batch_size, num_workers, num_batches, sample_interval)
         results.append(result)
 
         print(f"完成！训练时间: {result['training_time']:.2f}秒")
@@ -315,8 +365,11 @@ def main():
     # 分析结果
     analyze_results(results)
 
-    # 绘制对比图
+    # 绘制折线图（使用原始高频采样数据）
     plot_gpu_utilization(results)
+
+    # 绘制散点图（1秒采样）
+    plot_gpu_scatter(results)
 
     # 推荐最佳worker数
     print(f"\n{'='*80}")
